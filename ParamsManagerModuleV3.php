@@ -3,28 +3,25 @@
 declare(strict_types=1);
 
 // Подключение автозагрузчика Composer.
-// Предполагается, что папка vendor находится на одном уровне с этим файлом (в корне проекта).
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
-} elseif (file_exists(__DIR__ . '/../../vendor/autoload.php')) { // Если модуль в _support, а vendor в корне
+} elseif (file_exists(__DIR__ . '/../../vendor/autoload.php')) {
     require_once __DIR__ . '/../../vendor/autoload.php';
 }
-
 
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Monolog\Formatter\LineFormatter;
-use Monolog\Handler\MissingExtensionException; // Используется в ApcuSimpleCache
+use Monolog\Handler\MissingExtensionException;
 use Psr\SimpleCache\CacheInterface;
 
 /**
- * LogManager предоставляет централизованный доступ к экземпляру логгера Monolog
- * и настраивает глобальные обработчики ошибок и исключений.
+ * LogManager
  */
 final class LogManager
 {
     private static ?Logger $logger = null;
-    private static bool $handlerFailed = false; // Флаг неудачной инициализации основного обработчика
+    private static bool $handlerFailed = false;
 
     public static function getLogger(): Logger
     {
@@ -33,7 +30,7 @@ final class LogManager
                 $formatter = new LineFormatter(null, null, true, true);
                 $formatter->includeStacktraces(true);
 
-                $logFilePath = __DIR__ . '/app.log'; // Путь к лог-файлу относительно этого файла (корень проекта)
+                $logFilePath = __DIR__ . '/app.log';
                 $logDir = dirname($logFilePath);
                 if (!is_dir($logDir)) {
                     @mkdir($logDir, 0775, true);
@@ -55,7 +52,7 @@ final class LogManager
                     self::$logger->pushHandler($handler);
                 }
 
-                if (self::$logger !== null) { // Устанавливаем обработчики, даже если это NullHandler
+                if (self::$logger !== null) {
                     self::registerGlobalHandlers();
                 }
 
@@ -64,12 +61,12 @@ final class LogManager
                 error_log("Критическая ошибка инициализации LogManager: " . $e->getMessage() . " Trace: " . $e->getTraceAsString());
                 self::$logger = new Logger('App_Fallback_Init_Error');
                 self::$logger->pushHandler(new \Monolog\Handler\NullHandler());
-                 if (self::$logger !== null) { // Попытка установить обработчики даже при ошибке
+                 if (self::$logger !== null) {
                     self::registerGlobalHandlers();
                 }
             }
         } elseif (self::$logger === null && self::$handlerFailed) {
-             if (!isset(self::$logger) || self::$logger === null) { // Дополнительная проверка
+             if (!isset(self::$logger) || self::$logger === null) {
                 self::$logger = new Logger('App_Fallback_Critical_Failure');
                 self::$logger->pushHandler(new \Monolog\Handler\NullHandler());
             }
@@ -98,10 +95,6 @@ final class LogManager
             if (php_sapi_name() !== 'cli' && !headers_sent()) {
                 http_response_code(500);
             }
-            if (php_sapi_name() === 'cli') {
-                 echo "Критическая ошибка: " . $exception->getMessage() . "\nПодробности в app.log (если доступен).\n";
-            }
-            // exit(1); // Не будем прерывать выполнение тестов из-за логгера
         });
 
         set_error_handler(function (int $severity, string $message, string $file, int $line): bool {
@@ -117,7 +110,7 @@ final class LogManager
             } else {
                 error_log("Fallback: Logger not available for PHP error: {$message} in {$file}:{$line}");
             }
-            return true; // Не прерываем выполнение из-за обработчика ошибок
+            return true;
         });
     }
 }
@@ -128,14 +121,15 @@ if (class_exists(Monolog\Logger::class)) {
 
 class ApcuSimpleCache implements CacheInterface
 {
-    private const CACHE_PREFIX = 'app_params_';
-    private const DEFAULT_TTL = 3600;
+    private const CACHE_PREFIX = 'app_params_'; // Убрана типизация для PHP < 8.3
+    private const DEFAULT_TTL = 3600;    // Убрана типизация для PHP < 8.3
 
     private function isApcuActive(): bool
     {
         return extension_loaded('apcu') && apcu_enabled();
     }
 
+    // Убран атрибут #[\Override] для PHP < 8.3
     public function get(string $key, mixed $default = null): mixed
     {
         if (!$this->isApcuActive()) return $default;
@@ -144,6 +138,7 @@ class ApcuSimpleCache implements CacheInterface
         return $success ? $value : $default;
     }
 
+    // Убран атрибут #[\Override]
     public function set(string $key, mixed $value, null|int|\DateInterval $ttl = null): bool
     {
         if (!$this->isApcuActive()) return false;
@@ -159,12 +154,14 @@ class ApcuSimpleCache implements CacheInterface
         return apcu_store(self::CACHE_PREFIX . $key, $value, $actualTtl);
     }
 
+    // Убран атрибут #[\Override]
     public function delete(string $key): bool
     {
         if (!$this->isApcuActive()) return false;
         return apcu_delete(self::CACHE_PREFIX . $key);
     }
 
+    // Убран атрибут #[\Override]
     public function clear(): bool
     {
         if (!$this->isApcuActive()) return false;
@@ -192,6 +189,7 @@ class ApcuSimpleCache implements CacheInterface
         return false;
     }
 
+    // Убран атрибут #[\Override]
     public function getMultiple(iterable $keys, mixed $default = null): iterable
     {
         if (!$this->isApcuActive()) {
@@ -214,6 +212,7 @@ class ApcuSimpleCache implements CacheInterface
         return $results;
     }
 
+    // Убран атрибут #[\Override]
     public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
     {
         if (!$this->isApcuActive()) return false;
@@ -236,6 +235,7 @@ class ApcuSimpleCache implements CacheInterface
         return empty($errors);
     }
 
+    // Убран атрибут #[\Override]
     public function deleteMultiple(iterable $keys): bool
     {
         if (!$this->isApcuActive()) return false;
@@ -246,6 +246,7 @@ class ApcuSimpleCache implements CacheInterface
         return $result === true || (is_array($result) && empty($result));
     }
 
+    // Убран атрибут #[\Override]
     public function has(string $key): bool
     {
         if (!$this->isApcuActive()) return false;
@@ -359,8 +360,8 @@ final class CacheManager
 
 class DB
 {
-    private ?\PDO $pdo = null; // Сделаем nullable для явного закрытия
-    private string $dsnForLog;
+    private ?\PDO $pdo = null;
+    private readonly string $dsnForLog; // PHP 8.1+ readonly
     private array $initializedTables = [];
 
     public function __construct(string $dsn, ?string $username = null, ?string $password = null, array $options = [])
@@ -398,7 +399,7 @@ class DB
                 $this->pdo->exec('PRAGMA synchronous = NORMAL;');
             }
         } catch (\PDOException $e) {
-            $this->pdo = null; // Убедимся, что pdo null в случае ошибки
+            $this->pdo = null;
             if ($logManagerExists) LogManager::getLogger()->critical("Ошибка подключения/настройки БД для DSN {$dsn}", ['exception_class' => get_class($e), 'message' => $e->getMessage(), 'code' => $e->getCode()]);
             throw new \RuntimeException("Ошибка инициализации БД: " . $e->getMessage(), (int)$e->getCode(), $e);
         }
@@ -407,7 +408,7 @@ class DB
     public function close(): void
     {
         if ($this->pdo !== null) {
-            $this->pdo = null; // Это должно освободить блокировку файла SQLite
+            $this->pdo = null;
             if (class_exists(LogManager::class, false)) {
                 LogManager::getLogger()->info("DB connection explicitly closed for DSN: {$this->dsnForLog}");
             }
@@ -416,19 +417,12 @@ class DB
 
     public function __destruct()
     {
-        if ($this->pdo !== null) {
-             if (class_exists(LogManager::class, false)) {
-                LogManager::getLogger()->info("DB connection destructed for DSN: {$this->dsnForLog}. Consider explicit close().");
-            }
-            $this->pdo = null;
-        }
+        $this->close();
     }
     
     private function getPdo(): \PDO
     {
         if ($this->pdo === null) {
-            // Это не должно происходить в нормальном потоке тестов, где DB создается и используется сразу.
-            // Если это произошло, значит, соединение было закрыто или не установлено.
             LogManager::getLogger()->critical("Попытка использовать закрытое или неинициализированное PDO соединение.", ['dsn' => $this->dsnForLog]);
             throw new \RuntimeException("PDO соединение не доступно.");
         }
@@ -474,19 +468,6 @@ class DB
             throw new \RuntimeException("Ошибка выполнения SQL-запроса: " . $e->getMessage() . " Запрос: " . $query, (int)$e->getCode(), $e);
         }
     }
-
-    public function fetchOne(string $query, array $params = []): ?array
-    {
-        try {
-            $stmt = $this->getPdo()->prepare($query);
-            $stmt->execute($params);
-            $result = $stmt->fetch(\PDO::FETCH_ASSOC);
-            return $result === false ? null : $result;
-        } catch (\PDOException $e) {
-            LogManager::getLogger()->error("Ошибка SQL-запроса (fetchOne)", ['query' => $query, 'params' => $params, 'error_code' => $e->getCode(), 'error_info' => $e->errorInfo, 'message' => $e->getMessage()]);
-            throw new \RuntimeException("Ошибка SQL-запроса: " . $e->getMessage() . " Запрос: " . $query, (int)$e->getCode(), $e);
-        }
-    }
     
     public function fetchValue(string $query, array $params = []): mixed
     {
@@ -529,7 +510,7 @@ interface ParamsManagerInterface
 
 class PdoParamsManager implements ParamsManagerInterface
 {
-    private DB $db;
+    private readonly DB $db; // PHP 8.1+ readonly
 
     public function __construct(DB $db)
     {
@@ -541,6 +522,7 @@ class PdoParamsManager implements ParamsManagerInterface
         return $table . '_' . $id;
     }
 
+    // Убран атрибут #[\Override]
     public function removeAllParamsFromTable(string $table): void
     {
         try {
@@ -554,6 +536,7 @@ class PdoParamsManager implements ParamsManagerInterface
         }
     }
 
+    // Убран атрибут #[\Override]
     public function getParam(string $table, string $fullKey): mixed
     {
         $paramParts = explode(".", $fullKey);
@@ -582,10 +565,11 @@ class PdoParamsManager implements ParamsManagerInterface
                 return null;
             }
             
-            $paramsObject = json_decode((string)$jsonString, true);
-            if ($paramsObject === null && json_last_error() !== JSON_ERROR_NONE) {
-                 LogManager::getLogger()->error("Ошибка декодирования JSON из БД для таблицы {$table}, ID {$id}", ['json_error' => json_last_error_msg(), 'json_string_snippet' => substr((string)$jsonString, 0, 100)]);
-                 throw new \RuntimeException("Ошибка декодирования JSON из БД для таблицы {$table}, ID {$id}: " . json_last_error_msg());
+            try {
+                $paramsObject = json_decode((string)$jsonString, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                 LogManager::getLogger()->error("Ошибка декодирования JSON из БД для таблицы {$table}, ID {$id}", ['json_error' => $e->getMessage(), 'json_string_snippet' => substr((string)$jsonString, 0, 100)]);
+                 throw new \RuntimeException("Ошибка декодирования JSON из БД для таблицы {$table}, ID {$id}: " . $e->getMessage(), $e->getCode(), $e);
             }
 
             if (CacheManager::isEnabled()) {
@@ -608,6 +592,7 @@ class PdoParamsManager implements ParamsManagerInterface
         return $data;
     }
 
+    // Убран атрибут #[\Override]
     public function setParam(string $table, string $fullKey, mixed $value): void
     {
         $paramParts = explode(".", $fullKey);
@@ -629,11 +614,12 @@ class PdoParamsManager implements ParamsManagerInterface
             $phpArray = [];
 
             if ($jsonString !== null && $jsonString !== false) {
-                $phpArray = json_decode((string)$jsonString, true);
-                if ($phpArray === null && json_last_error() !== JSON_ERROR_NONE) {
+                try {
+                    $phpArray = json_decode((string)$jsonString, true, 512, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
                     if ($localTransaction) $this->db->rollBack();
-                    LogManager::getLogger()->error("setParam: Ошибка декодирования существующего JSON для таблицы {$table}, ID {$id}", ['json_error' => json_last_error_msg()]);
-                    throw new \RuntimeException("Ошибка декодирования существующего JSON для таблицы {$table}, ID {$id}: " . json_last_error_msg());
+                    LogManager::getLogger()->error("setParam: Ошибка декодирования существующего JSON для таблицы {$table}, ID {$id}", ['json_error' => $e->getMessage()]);
+                    throw new \RuntimeException("Ошибка декодирования существующего JSON для таблицы {$table}, ID {$id}: " . $e->getMessage(), $e->getCode(), $e);
                 }
             }
             
@@ -659,11 +645,12 @@ class PdoParamsManager implements ParamsManagerInterface
             }
             unset($temp);
 
-            $newJson = json_encode($phpArray, JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
-            if ($newJson === false) {
+            try {
+                $newJson = json_encode($phpArray, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+            } catch (\JsonException $e) {
                 if ($localTransaction) $this->db->rollBack();
-                LogManager::getLogger()->error("setParam: Ошибка кодирования значения в JSON для таблицы {$table}, ID {$id}", ['json_error' => json_last_error_msg()]);
-                throw new \RuntimeException("Ошибка кодирования значения в JSON для таблицы {$table}, ID {$id}: " . json_last_error_msg());
+                LogManager::getLogger()->error("setParam: Ошибка кодирования значения в JSON для таблицы {$table}, ID {$id}", ['json_error' => $e->getMessage()]);
+                throw new \RuntimeException("Ошибка кодирования значения в JSON для таблицы {$table}, ID {$id}: " . $e->getMessage(), $e->getCode(), $e);
             }
 
             $columns = ['id', 'params'];
@@ -715,11 +702,14 @@ class PdoParamsManager implements ParamsManagerInterface
             if ($localTransaction && $this->db->inTransaction()) {
                  $this->db->rollBack();
             }
-            LogManager::getLogger()->error("Ошибка в setParam для таблицы {$table}, ID {$id}", ['fullKey' => $fullKey, 'exception_class' => get_class($e), 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            if (!($e instanceof \RuntimeException && $e->getPrevious() instanceof \JsonException)) {
+                 LogManager::getLogger()->error("Ошибка в setParam для таблицы {$table}, ID {$id}", ['fullKey' => $fullKey, 'exception_class' => get_class($e), 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            }
             throw $e;
         }
     }
 
+    // Убран атрибут #[\Override]
     public function unsetParam(string $table, string $fullKey): void
     {
         $paramParts = explode(".", $fullKey);
@@ -744,12 +734,14 @@ class PdoParamsManager implements ParamsManagerInterface
                     if ($localTransaction) $this->db->commit(); 
                     return;
                 }
-
-                $phpArray = json_decode((string)$jsonString, true);
-                if ($phpArray === null && json_last_error() !== JSON_ERROR_NONE) {
+                
+                $phpArray = [];
+                try {
+                    $phpArray = json_decode((string)$jsonString, true, 512, JSON_THROW_ON_ERROR);
+                } catch (\JsonException $e) {
                     if ($localTransaction) $this->db->rollBack();
-                    LogManager::getLogger()->error("unsetParam: Ошибка декодирования JSON для таблицы {$table}, ID {$id}", ['json_error' => json_last_error_msg()]);
-                    throw new \RuntimeException("Ошибка декодирования JSON для удаления (таблица {$table}, ID {$id}): " . json_last_error_msg());
+                    LogManager::getLogger()->error("unsetParam: Ошибка декодирования JSON для таблицы {$table}, ID {$id}", ['json_error' => $e->getMessage()]);
+                    throw new \RuntimeException("Ошибка декодирования JSON для удаления (таблица {$table}, ID {$id}): " . $e->getMessage(), $e->getCode(), $e);
                 }
 
                 $temp = &$phpArray;
@@ -768,11 +760,12 @@ class PdoParamsManager implements ParamsManagerInterface
                 
                 if ($pathValid && is_array($parentOfKey) && array_key_exists($keyToRemove, $parentOfKey)) {
                     unset($parentOfKey[$keyToRemove]);
-                    $newJson = json_encode($phpArray, JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
-                    if ($newJson === false) {
+                    try {
+                        $newJson = json_encode($phpArray, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+                    } catch (\JsonException $e) {
                         if ($localTransaction) $this->db->rollBack();
-                        LogManager::getLogger()->error("unsetParam: Ошибка кодирования JSON после удаления для таблицы {$table}, ID {$id}", ['json_error' => json_last_error_msg()]);
-                        throw new \RuntimeException("Ошибка кодирования JSON после удаления (таблица {$table}, ID {$id}): " . json_last_error_msg());
+                        LogManager::getLogger()->error("unsetParam: Ошибка кодирования JSON после удаления для таблицы {$table}, ID {$id}", ['json_error' => $e->getMessage()]);
+                        throw new \RuntimeException("Ошибка кодирования JSON после удаления (таблица {$table}, ID {$id}): " . $e->getMessage(), $e->getCode(), $e);
                     }
                     $this->db->execute("UPDATE {$table} SET params = :params WHERE id = :id", [':params' => $newJson, ':id' => $id]);
                 }
@@ -787,11 +780,14 @@ class PdoParamsManager implements ParamsManagerInterface
              if ($localTransaction && $this->db->inTransaction()) {
                  $this->db->rollBack();
             }
-            LogManager::getLogger()->error("Ошибка в unsetParam для таблицы {$table}, ID {$id}", ['fullKey' => $fullKey, 'exception_class' => get_class($e), 'message' => $e->getMessage()]);
+            if (!($e instanceof \RuntimeException && $e->getPrevious() instanceof \JsonException)) {
+                LogManager::getLogger()->error("Ошибка в unsetParam для таблицы {$table}, ID {$id}", ['fullKey' => $fullKey, 'exception_class' => get_class($e), 'message' => $e->getMessage()]);
+            }
             throw $e;
         }
     }
 
+    // Убран атрибут #[\Override]
     public function unsetParams(string $table, array|string $keys): void
     {
         $actualKeys = [];
@@ -841,7 +837,10 @@ class PdoParamsManager implements ParamsManagerInterface
             if ($localTransactionOuter && $this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-            LogManager::getLogger()->error("Ошибка во время группового удаления (unsetParams) для таблицы {$table}", ['keys_attempted' => $actualKeys, 'exception_class' => get_class($e), 'message' => $e->getMessage()]);
+             if (!($e instanceof \RuntimeException && $e->getPrevious() instanceof \JsonException) &&
+                !($e instanceof \PDOException)) {
+                LogManager::getLogger()->error("Ошибка во время группового удаления (unsetParams) для таблицы {$table}", ['keys_attempted' => $actualKeys, 'exception_class' => get_class($e), 'message' => $e->getMessage()]);
+            }
             throw $e;
         }
     }
@@ -851,9 +850,9 @@ abstract class SimpleParamsModel
 {
     abstract public function removeParams(): void;
     abstract public function getParam(string $key): mixed;
-    abstract public function setParam(string $key, $value): void;
+    abstract public function setParam(string $key, mixed $value): void;
     abstract public function unsetParam(string $key): void;
-    abstract public function unsetParams($keys): void;
+    abstract public function unsetParams(array|string $keys): void;
 }
 
 /** @var ?DB $globalAppDbForTzTest */
@@ -865,9 +864,9 @@ $defaultDbFileForTzCompatibility = __DIR__ . '/data.db';
 
 class Order extends SimpleParamsModel
 {
-    public const TABLE_NAME = "Orders";
-    private ParamsManagerInterface $paramsManager;
-    private DB $dbInstance;
+    public const TABLE_NAME = "Orders"; // Убрана типизация для PHP < 8.3
+    private readonly ParamsManagerInterface $paramsManager; // PHP 8.1+ readonly
+    private readonly DB $dbInstance; // PHP 8.1+ readonly
 
     public function __construct()
     {
@@ -909,18 +908,23 @@ class Order extends SimpleParamsModel
         }
     }
 
+    // Убран атрибут #[\Override]
     public function removeParams(): void { $this->paramsManager->removeAllParamsFromTable(self::TABLE_NAME); }
+    // Убран атрибут #[\Override]
     public function getParam(string $key): mixed { return $this->paramsManager->getParam(self::TABLE_NAME, $key); }
+    // Убран атрибут #[\Override]
     public function setParam(string $key, $value): void { $this->paramsManager->setParam(self::TABLE_NAME, $key, $value); }
+    // Убран атрибут #[\Override]
     public function unsetParam(string $key): void { $this->paramsManager->unsetParam(self::TABLE_NAME, $key); }
-    public function unsetParams($keys): void { $this->paramsManager->unsetParams(self::TABLE_NAME, $keys); }
+    // Убран атрибут #[\Override]
+    public function unsetParams(array|string $keys): void { $this->paramsManager->unsetParams(self::TABLE_NAME, $keys); }
 }
 
 class Product extends SimpleParamsModel
 {
-    public const TABLE_NAME = "Products";
-    private ParamsManagerInterface $paramsManager;
-    private DB $dbInstance;
+    public const TABLE_NAME = "Products"; // Убрана типизация для PHP < 8.3
+    private readonly ParamsManagerInterface $paramsManager; // PHP 8.1+ readonly
+    private readonly DB $dbInstance; // PHP 8.1+ readonly
 
     public function __construct()
     {
@@ -967,11 +971,16 @@ class Product extends SimpleParamsModel
         }
     }
 
+    // Убран атрибут #[\Override]
     public function removeParams(): void { $this->paramsManager->removeAllParamsFromTable(self::TABLE_NAME); }
+    // Убран атрибут #[\Override]
     public function getParam(string $key): mixed { return $this->paramsManager->getParam(self::TABLE_NAME, $key); }
+    // Убран атрибут #[\Override]
     public function setParam(string $key, $value): void { $this->paramsManager->setParam(self::TABLE_NAME, $key, $value); }
+    // Убран атрибут #[\Override]
     public function unsetParam(string $key): void { $this->paramsManager->unsetParam(self::TABLE_NAME, $key); }
-    public function unsetParams($keys): void { $this->paramsManager->unsetParams(self::TABLE_NAME, $keys); }
+    // Убран атрибут #[\Override]
+    public function unsetParams(array|string $keys): void { $this->paramsManager->unsetParams(self::TABLE_NAME, $keys); }
 }
 
 ?>
